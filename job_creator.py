@@ -1,0 +1,258 @@
+import urllib.parse, urllib.request, urllib.error
+import os
+
+
+def fetch_assembly():
+    dir_content = os.listdir()
+
+    assembly_not_downloaded = not ("assembly_summary.txt" in dir_content)
+
+    if assembly_not_downloaded:
+
+        assembly_url = "https://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/assembly_summary.txt"
+        response = urllib.request.urlopen(assembly_url)
+        web_content = response.read().decode("UTF-8")
+        with open("assembly_summary.txt", "w") as file:
+            file.write(web_content)
+            file.close()
+    
+    else:
+        return "assembly summary present"
+
+
+def format_to_usability(string:str):
+    formatted_string = string.replace(" ", "_").replace(".", "_").replace("/", "_").replace(",", "_")
+
+    return formatted_string
+
+
+def fetch_gattung():
+    gattung_name = input("Enter genus name: ").capitalize()
+    species_count = 0
+
+    assembly_file = open("assembly_summary.txt", "r")
+    lines = assembly_file.readlines()
+
+    assembly_header = lines[1].split("\t")
+
+    # asm_lvl_index = assembly_header.index("assembly_level")
+    ftp_index = assembly_header.index("ftp_path")
+    accession_index = assembly_header.index("# assembly_accession")
+    asm_name_index = assembly_header.index("asm_name")
+    organism_name_index = assembly_header.index("organism_name")
+    isolate_index = assembly_header.index("isolate")
+
+    species_in_gattung = []
+
+    with open("genus_DL.sh", "w") as shell:
+        shell.write(f"mkdir {gattung_name}\n")
+        shell.write(f"cd {gattung_name}\n")
+
+        shell.write(f"mkdir {gattung_name}_protein\n")
+        shell.write(f"cd {gattung_name}_protein/\n")
+
+        shell.write(f"touch {gattung_name}_records.txt\n")
+        
+        for line in lines:
+
+            full_check = "Full" in line
+            complete_check = "Complete Genome" in line
+
+            if gattung_name in line and (full_check or complete_check):
+
+                contents = line.split("\t")
+
+                species_count += 1
+
+                species_in_gattung.append(line)
+
+                strain_url = contents[ftp_index]
+
+                asm_name = contents[asm_name_index].replace("/", "_")
+
+                accession = contents[accession_index]
+
+                organism_name = contents[organism_name_index]
+
+                infra_name = contents[organism_name_index + 1]
+
+                isolate = contents[isolate_index]
+
+                if " " in asm_name:
+                    asm_name = asm_name.replace(" ", "_")
+
+                if " " in accession:
+                    accession = accession.replace(" ", "_")
+                
+                # if " " in organism_name:
+                #     organism_name = organism_name.replace(" ", "_")
+                
+                # if "." in organism_name:
+                #     organism_name = organism_name.replace(".", "_")
+
+                # if  "/" in organism_name:
+                #     organism_name = organism_name.replace("/", "_")
+
+                # if " " in infra_name:
+                #     infra_name = infra_name.replace(" ", "_")
+
+                # if "." in infra_name:
+                #     infra_name = infra_name.replace(".", "_")
+
+                if infra_name == "":
+                    infra_name = f"isolate={isolate}"
+
+                protein_url = f"{strain_url}/{accession}_{asm_name}_protein.faa.gz\n"
+
+                strain_name = format_to_usability(f"{organism_name}_{infra_name}")
+                
+                shell.write(f"wget -O {strain_name}_protein.faa.gz {protein_url}\n")
+                shell.write(f'echo "{accession}_{asm_name} downloaded as {strain_name}_protein.faa.gz" >> {gattung_name}_records.txt\n')
+                shell.write(f"gzip -d {strain_name}_protein.faa.gz\n")
+                shell.write(f'echo "{strain_name}_protein.faa.gz unzipped" >> {gattung_name}_records.txt\n')
+                
+        shell.close()
+
+        if species_count == 0:
+            print(f"No records for {gattung_name} found in the NCBI assembly file, try something else")
+            os.system("rm genus_DL.sh")
+            exit()
+        else:
+            os.system(f"echo {species_count} species of genus {gattung_name} found, downloading...")
+
+    os.system("bash genus_DL.sh")
+    os.system("rm genus_DL.sh")
+
+    species_downloaded = len(os.listdir(f"{gattung_name}/{gattung_name}_protein/")) - 1
+    print(f"{species_downloaded} species downloaded")
+
+    return gattung_name
+
+
+
+def gattung_job_creator(gattung_name):
+    print("Creating jobs...")
+
+    running_dir = os.getcwd()
+
+    working_dir = f"{running_dir}/{gattung_name}"
+    os.chdir(working_dir)
+
+    target_dir = f"{gattung_name}_protein"
+
+    target_dir_path = f"{working_dir}/{target_dir}"
+
+    species_names = os.listdir(target_dir_path)
+
+    species_count = len(species_names)
+    
+    batch_counter = 0
+
+    nr_result_dir = f"{working_dir}/{gattung_name}_nr_default_meganization"
+    nr_vfdb_dir = f"{working_dir}/{gattung_name}_nr_vfdb_meganization"
+    vfdb_result_dir = f"{working_dir}/{gattung_name}_vfdb_default_meganization"
+    vfdb_vfdb_dir = f"{working_dir}/{gattung_name}_vfdb_vfdb_meganization"
+    batches_dir  = f"{working_dir}/batches"
+
+    os.system(f"mkdir {nr_result_dir}")
+    os.system(f"mkdir {nr_vfdb_dir}")
+    os.system(f"mkdir {vfdb_result_dir}")
+    os.system(f"mkdir {vfdb_vfdb_dir}")
+    os.system(f"mkdir {batches_dir}")
+
+
+    for i in range(0, species_count):
+
+        if i % 5 == 0:
+            batch_counter += 1
+
+            job_name = gattung_name + f"_batch_{batch_counter}.sh"
+            job_dir = f"{batches_dir}/{job_name}"
+
+            jobtext = ["#PBS -l nodes=1:ppn=8", "\n#PBS -l walltime=30:00:00", "\n#PBS -l mem=32gb",
+                "\n#PBS -S /bin/bash", "\n#PBS -N " + job_name, "\n#PBS -j oe", "\n#PBS -o " + job_name + "_LOG",
+                f"\ncd PBS_O_WORKDIR", '\necho "running on node:"', "\nuname -a"]
+
+            with open(job_dir, "w") as shell:
+                shell.writelines(jobtext)
+                shell.close()
+        
+        diamond_cmd_part1 = f"\n/home/tu/tu_tu/tu_zxozy01/tools/diamond_15/diamond blastp -d {running_dir}/nr -q"
+        diamond_cmd_part2 = "_result.daa -f 100 -b 5 -c 1 --threads 8"
+
+        megan_cmd_part1 = "\n/home/tu/tu_tu/tu_zxozy01/tools/megan/tools/daa-meganizer -i"
+        megan_cmd_part2 = "-mdb /home/tu/tu_tu/tu_zxozy01/tools/megan-map-Feb2022-ue.db"
+
+        vfdb_dia_part1 = f"\n/home/tu/tu_tu/tu_zxozy01/tools/diamond_15/diamond blastp -d {running_dir}/vfdb -q"
+        vfdb_dia_part2 = f"_result.daa -f 100 -b 5 -c 1 --threads 8"
+
+        #vfdb_meg_part1 = "\n/home/tu/tu_tu/tu_zxozy01/tools/megan/tools/daa-meganizer -i "
+        #vfdb_meg_part2 = " -P /home/tu/tu_tu/tu_zxozy01/tools/megan/class/resources/files/vfdb.map"
+
+        target_filepath = target_dir_path + "/" + species_names[i]
+
+        output_name = species_names[i][0:-4]
+
+        f = open(job_dir, "a")
+        # runs diamond against nr and vfdb, copies the files, meganizes one set automatically and leaves the other set to be manually meganized with vfdb (for now)
+        f.write(f"{diamond_cmd_part1} {target_filepath} -o {nr_result_dir}/{output_name}{diamond_cmd_part2}")
+
+        f.write(f"\ncp {nr_result_dir}/{output_name}_result.daa {nr_vfdb_dir}")
+
+        f.write(f"{megan_cmd_part1} {nr_result_dir}/{output_name}_result.daa {megan_cmd_part2}")
+
+        f.write(f"{vfdb_dia_part1} {target_filepath} -o {vfdb_result_dir}/{output_name}{vfdb_dia_part2}")
+
+        f.write(f"\ncp {vfdb_result_dir}/{output_name}_result.daa {vfdb_vfdb_dir}")
+
+        f.write(f"{megan_cmd_part1} {vfdb_result_dir}/{output_name}_result.daa {megan_cmd_part2}")
+
+        f.close()
+    print(f"done, {batch_counter} jobs created")
+
+def comparison_creator(gattung_name):
+    # creates comparisons for the meganized sets (the manually meganized ones must be manually compared for now)
+
+    working_dir = os.getcwd()
+
+    nr_result_dir = f"{working_dir}/{gattung_name}_nr_default_meganization"
+    nr_vfdb_dir = f"{working_dir}/{gattung_name}_nr_vfdb_meganization"
+    vfdb_result_dir = f"{working_dir}/{gattung_name}_vfdb_default_meganization"
+    vfdb_vfdb_dir = f"{working_dir}/{gattung_name}_vfdb_vfdb_meganization"
+
+    jobtext = ["#PBS -l nodes=1:ppn=8", "\n#PBS -l walltime=02:00:00", "\n#PBS -l mem=32gb",
+            "\n#PBS -S /bin/bash", "\n#PBS -N " + f"{gattung_name}_comparison" , "\n#PBS -j oe", f"\n#PBS -o {gattung_name}_comparison_LOG",
+            f"\ncd PBS_O_WORKDIR", '\necho "running on node:"', "\nuname -a"]
+
+    with open(f"{gattung_name}_comparison.sh", "w") as shell:
+        shell.writelines(jobtext)
+        shell.close()
+
+    comparison_cmd_part1 = "\nhome/tu/tu_tu/tu_zxozy01/tools/megan/tools/compute-comparison -i "
+
+    shell = open(f"{gattung_name}_comparison.sh", "a")
+
+    shell.write(f"{comparison_cmd_part1}{nr_result_dir} -o {working_dir}/nr_default_comparison.megan")
+    #shell.write(f"{comparison_cmd_part1}{nr_vfdb_dir} -o {working_dir}/nr_vfdb_comparison.megan")
+    shell.write(f"{comparison_cmd_part1}{vfdb_result_dir} -o {working_dir}/vfdb_default_comparison.megan")
+    #shell.write(f"{comparison_cmd_part1}{vfdb_vfdb_dir} -o {working_dir}/vfdb_vfdb_comparison.megan")
+
+    shell.close()
+    
+
+
+
+
+def main():
+    fetch_assembly()
+
+    genus_name = fetch_gattung()
+
+    gattung_job_creator(genus_name)
+
+    comparison_creator(genus_name)
+
+
+
+if __name__ == '__main__':
+    main()
