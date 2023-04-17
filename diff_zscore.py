@@ -2,6 +2,12 @@ import os
 import pathlib
 
 def zscore_filter():
+    """\
+    Given a Z-Score chart with 2 zscore values of PGP and Pathogen for each KEGG id is filtered for:
+    - absence of pgp/presence of pathogen 
+    - higher pathogen score than pgp
+    the filtered KEGG ids are saved in files
+    """
     dir_content = os.listdir()
     # print(pathlib.Path.resolve(__file__))
 

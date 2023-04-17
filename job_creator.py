@@ -3,6 +3,9 @@ import os
 
 
 def fetch_assembly():
+    """\
+    Downloads the NCBI Assembly file (as assembly_summary.txt) if it is not already present
+    """
     dir_content = os.listdir()
 
     assembly_not_downloaded = not ("assembly_summary.txt" in dir_content)
@@ -21,13 +24,32 @@ def fetch_assembly():
 
 
 def format_to_usability(string:str):
+    """\
+    Removes several characters (" ", ".", "/", ",") from a given string, if present, to enable use as link
+
+    Parameters
+    ----------
+    string : String
+        String to be formatted
+
+    Returns
+    -------
+    formatted_string : String
+        Formatted String
+
+
+    """
     formatted_string = string.replace(" ", "_").replace(".", "_").replace("/", "_").replace(",", "_")
 
     return formatted_string
 
 
-def fetch_gattung():
-    gattung_name = input("Enter genus name: ").capitalize()
+def fetch_genus():
+    """\
+    Parses the assembly file for a user-entered genus name, then creates and bashes a shell to download
+    that genus' protein.faa.gz files from NCBI. The downloads are placed withina new directory {genus}/{genus}_protein
+    """
+    genus_name = input("Enter genus name: ").capitalize()
     species_count = 0
 
     assembly_file = open("assembly_summary.txt", "r")
@@ -45,20 +67,20 @@ def fetch_gattung():
     species_in_gattung = []
 
     with open("genus_DL.sh", "w") as shell:
-        shell.write(f"mkdir {gattung_name}\n")
-        shell.write(f"cd {gattung_name}\n")
+        shell.write(f"mkdir {genus_name}\n")
+        shell.write(f"cd {genus_name}\n")
 
-        shell.write(f"mkdir {gattung_name}_protein\n")
-        shell.write(f"cd {gattung_name}_protein/\n")
+        shell.write(f"mkdir {genus_name}_protein\n")
+        shell.write(f"cd {genus_name}_protein/\n")
 
-        shell.write(f"touch {gattung_name}_records.txt\n")
+        shell.write(f"touch {genus_name}_records.txt\n")
         
         for line in lines:
 
             full_check = "Full" in line
             complete_check = "Complete Genome" in line
 
-            if gattung_name in line and (full_check or complete_check):
+            if genus_name in line and (full_check or complete_check):
 
                 contents = line.split("\t")
 
@@ -107,38 +129,53 @@ def fetch_gattung():
                 strain_name = format_to_usability(f"{organism_name}_{infra_name}")
                 
                 shell.write(f"wget -O {strain_name}_protein.faa.gz {protein_url}\n")
-                shell.write(f'echo "{accession}_{asm_name} downloaded as {strain_name}_protein.faa.gz" >> {gattung_name}_records.txt\n')
+                shell.write(f'echo "{accession}_{asm_name} downloaded as {strain_name}_protein.faa.gz" >> {genus_name}_records.txt\n')
                 shell.write(f"gzip -d {strain_name}_protein.faa.gz\n")
-                shell.write(f'echo "{strain_name}_protein.faa.gz unzipped" >> {gattung_name}_records.txt\n')
+                shell.write(f'echo "{strain_name}_protein.faa.gz unzipped" >> {genus_name}_records.txt\n')
                 
         shell.close()
 
         if species_count == 0:
-            print(f"No records for {gattung_name} found in the NCBI assembly file, try something else")
+            print(f"No records for {genus_name} found in the NCBI assembly file, try something else")
             os.system("rm genus_DL.sh")
             exit()
         else:
-            os.system(f"echo {species_count} species of genus {gattung_name} found, downloading...")
+            os.system(f"echo {species_count} species of genus {genus_name} found, downloading...")
 
     os.system("bash genus_DL.sh")
     os.system("rm genus_DL.sh")
 
-    species_downloaded = len(os.listdir(f"{gattung_name}/{gattung_name}_protein/")) - 1
+    species_downloaded = len(os.listdir(f"{genus_name}/{genus_name}_protein/")) - 1
     print(f"{species_downloaded} species downloaded")
 
-    return gattung_name
+    return genus_name
 
 
 
-def gattung_job_creator(gattung_name):
+def genus_job_creator(genus_name):
+    """\
+    Creates jobs for every species in the genus in batches of user-entered size, containing:
+    - diamond run against nr database
+    - meganization with mdb for resulting daa file
+    - diamond run against vfdb database
+    - sadly no automatic meganization with vfdb
+    for each species
+
+    Parameters
+    ----------
+    genus_name : String
+        Name of the genus for which jobs are created, used to navigate to the correct directory
+
+    """
+    batch_size = input("Enter size of batches (influences max runtime (4h per species) and amount of jobs):")
     print("Creating jobs...")
 
     running_dir = os.getcwd()
 
-    working_dir = f"{running_dir}/{gattung_name}"
+    working_dir = f"{running_dir}/{genus_name}"
     os.chdir(working_dir)
 
-    target_dir = f"{gattung_name}_protein"
+    target_dir = f"{genus_name}_protein"
 
     target_dir_path = f"{working_dir}/{target_dir}"
 
@@ -148,10 +185,10 @@ def gattung_job_creator(gattung_name):
     
     batch_counter = 0
 
-    nr_result_dir = f"{working_dir}/{gattung_name}_nr_default_meganization"
-    nr_vfdb_dir = f"{working_dir}/{gattung_name}_nr_vfdb_meganization"
-    vfdb_result_dir = f"{working_dir}/{gattung_name}_vfdb_default_meganization"
-    vfdb_vfdb_dir = f"{working_dir}/{gattung_name}_vfdb_vfdb_meganization"
+    nr_result_dir = f"{working_dir}/{genus_name}_nr_default_meganization"
+    nr_vfdb_dir = f"{working_dir}/{genus_name}_nr_vfdb_meganization"
+    vfdb_result_dir = f"{working_dir}/{genus_name}_vfdb_default_meganization"
+    vfdb_vfdb_dir = f"{working_dir}/{genus_name}_vfdb_vfdb_meganization"
     batches_dir  = f"{working_dir}/batches"
 
     os.system(f"mkdir {nr_result_dir}")
@@ -160,16 +197,17 @@ def gattung_job_creator(gattung_name):
     os.system(f"mkdir {vfdb_vfdb_dir}")
     os.system(f"mkdir {batches_dir}")
 
+    max_runtime = batch_size * 4
 
     for i in range(0, species_count):
 
-        if i % 5 == 0:
+        if i % batch_size == 0:
             batch_counter += 1
 
-            job_name = gattung_name + f"_batch_{batch_counter}.sh"
+            job_name = genus_name + f"_batch_{batch_counter}.sh"
             job_dir = f"{batches_dir}/{job_name}"
 
-            jobtext = ["#PBS -l nodes=1:ppn=8", "\n#PBS -l walltime=30:00:00", "\n#PBS -l mem=32gb",
+            jobtext = ["#PBS -l nodes=1:ppn=8", f"\n#PBS -l walltime={max_runtime}:00:00", "\n#PBS -l mem=32gb",
                 "\n#PBS -S /bin/bash", "\n#PBS -N " + job_name, "\n#PBS -j oe", "\n#PBS -o " + job_name + "_LOG",
                 f"\ncd PBS_O_WORKDIR", '\necho "running on node:"', "\nuname -a"]
 
@@ -177,11 +215,11 @@ def gattung_job_creator(gattung_name):
                 shell.writelines(jobtext)
                 shell.close()
         
-        diamond_cmd_part1 = f"\n/home/tu/tu_tu/tu_zxozy01/tools/diamond_15/diamond blastp -d {running_dir}/nr -q"
-        diamond_cmd_part2 = "_result.daa -f 100 -b 5 -c 1 --threads 8"
+        nr_dia_part1 = f"\n/home/tu/tu_tu/tu_zxozy01/tools/diamond_15/diamond blastp -d {running_dir}/nr -q"
+        nr_dia_part2 = "_result.daa -f 100 -b 5 -c 1 --threads 8"
 
-        megan_cmd_part1 = "\n/home/tu/tu_tu/tu_zxozy01/tools/megan/tools/daa-meganizer -i"
-        megan_cmd_part2 = "-mdb /home/tu/tu_tu/tu_zxozy01/tools/megan-map-Feb2022-ue.db"
+        mdb_meg_part1 = "\n/home/tu/tu_tu/tu_zxozy01/tools/megan/tools/daa-meganizer -i"
+        mdb_meg_part2 = "-mdb /home/tu/tu_tu/tu_zxozy01/tools/megan-map-Feb2022-ue.db"
 
         vfdb_dia_part1 = f"\n/home/tu/tu_tu/tu_zxozy01/tools/diamond_15/diamond blastp -d {running_dir}/vfdb -q"
         vfdb_dia_part2 = f"_result.daa -f 100 -b 5 -c 1 --threads 8"
@@ -195,42 +233,53 @@ def gattung_job_creator(gattung_name):
 
         f = open(job_dir, "a")
         # runs diamond against nr and vfdb, copies the files, meganizes one set automatically and leaves the other set to be manually meganized with vfdb (for now)
-        f.write(f"{diamond_cmd_part1} {target_filepath} -o {nr_result_dir}/{output_name}{diamond_cmd_part2}")
+        f.write(f"{nr_dia_part1} {target_filepath} -o {nr_result_dir}/{output_name}{nr_dia_part2}")
 
         f.write(f"\ncp {nr_result_dir}/{output_name}_result.daa {nr_vfdb_dir}")
 
-        f.write(f"{megan_cmd_part1} {nr_result_dir}/{output_name}_result.daa {megan_cmd_part2}")
+        f.write(f"{mdb_meg_part1} {nr_result_dir}/{output_name}_result.daa {mdb_meg_part2}")
 
         f.write(f"{vfdb_dia_part1} {target_filepath} -o {vfdb_result_dir}/{output_name}{vfdb_dia_part2}")
 
         f.write(f"\ncp {vfdb_result_dir}/{output_name}_result.daa {vfdb_vfdb_dir}")
 
-        f.write(f"{megan_cmd_part1} {vfdb_result_dir}/{output_name}_result.daa {megan_cmd_part2}")
+        #f.write(f"{vfdb_meg_part1} {vfdb_result_dir}/{output_name}_result.daa {vfdb_meg_part2}")
 
         f.close()
     print(f"done, {batch_counter} jobs created")
 
-def comparison_creator(gattung_name):
+
+
+def comparison_creator(genus_name):
+    """\
+    Creates a job to run comparisons for the meganized sets
+
+    Parameters
+    ----------
+    genus_name : String
+        Name of the genus for which jobs are created, used to navigate to the correct directory
+        
+    """
     # creates comparisons for the meganized sets (the manually meganized ones must be manually compared for now)
 
     working_dir = os.getcwd()
 
-    nr_result_dir = f"{working_dir}/{gattung_name}_nr_default_meganization"
-    nr_vfdb_dir = f"{working_dir}/{gattung_name}_nr_vfdb_meganization"
-    vfdb_result_dir = f"{working_dir}/{gattung_name}_vfdb_default_meganization"
-    vfdb_vfdb_dir = f"{working_dir}/{gattung_name}_vfdb_vfdb_meganization"
+    nr_result_dir = f"{working_dir}/{genus_name}_nr_default_meganization"
+    nr_vfdb_dir = f"{working_dir}/{genus_name}_nr_vfdb_meganization"
+    vfdb_result_dir = f"{working_dir}/{genus_name}_vfdb_default_meganization"
+    vfdb_vfdb_dir = f"{working_dir}/{genus_name}_vfdb_vfdb_meganization"
 
     jobtext = ["#PBS -l nodes=1:ppn=8", "\n#PBS -l walltime=02:00:00", "\n#PBS -l mem=32gb",
-            "\n#PBS -S /bin/bash", "\n#PBS -N " + f"{gattung_name}_comparison" , "\n#PBS -j oe", f"\n#PBS -o {gattung_name}_comparison_LOG",
+            "\n#PBS -S /bin/bash", "\n#PBS -N " + f"{genus_name}_comparison" , "\n#PBS -j oe", f"\n#PBS -o {genus_name}_comparison_LOG",
             f"\ncd PBS_O_WORKDIR", '\necho "running on node:"', "\nuname -a"]
 
-    with open(f"{gattung_name}_comparison.sh", "w") as shell:
+    with open(f"{genus_name}_comparison.sh", "w") as shell:
         shell.writelines(jobtext)
         shell.close()
 
     comparison_cmd_part1 = "\nhome/tu/tu_tu/tu_zxozy01/tools/megan/tools/compute-comparison -i "
 
-    shell = open(f"{gattung_name}_comparison.sh", "a")
+    shell = open(f"{genus_name}_comparison.sh", "a")
 
     shell.write(f"{comparison_cmd_part1}{nr_result_dir} -o {working_dir}/nr_default_comparison.megan")
     #shell.write(f"{comparison_cmd_part1}{nr_vfdb_dir} -o {working_dir}/nr_vfdb_comparison.megan")
@@ -246,9 +295,9 @@ def comparison_creator(gattung_name):
 def main():
     fetch_assembly()
 
-    genus_name = fetch_gattung()
+    genus_name = fetch_genus()
 
-    gattung_job_creator(genus_name)
+    genus_job_creator(genus_name)
 
     comparison_creator(genus_name)
 

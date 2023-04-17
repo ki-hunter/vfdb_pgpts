@@ -1,6 +1,9 @@
 import os
 
 def kegg_izer():
+    """\
+    Filters the total KEGG ids from a MEGAN comparison for the KEGG ids of virulence factors in the VFDB
+    """
     dir_content = os.listdir()
     print(dir_content)
 
@@ -28,8 +31,6 @@ def kegg_izer():
     comparison_lines = comparison_file.readlines()
 
     comparison_trimmed = list(comparison_lines[0])
-
-    comparison_absence_presence = list(comparison_lines[0])
 
     for i in range(1, len(comparison_lines)):
         line = comparison_lines[i].split("\t")

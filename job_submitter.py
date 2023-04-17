@@ -1,5 +1,8 @@
 import os
 def submitting_shell():
+    """\
+    Submits all jobs of a user-specified genus found in the {genus}/batches directory
+    """
     dir_content = os.listdir()
     gattung_name = input("Enter genus for which you want to submit jobs:").capitalize()
     cwd = os.getcwd()
@@ -14,7 +17,7 @@ def submitting_shell():
             os.system(f"qsub -q short {batch}")
             print(f"{batch} submitted")
         
-        print("Batches, submitted. Overview")
+        print("Batches submitted. Overview")
         os.system("qstat -u tu_zxozy01")
 
     else:
