@@ -31,25 +31,25 @@ def zscore_filter():
 
     zscore_no_pgp = [line for line in zscore_lines if (float(line[2]) >= float(line[1])) and (float(line[1]) == 0.0)]
 
-    with open("kosakonia_nr_default_zscore_high_path.txt", "w") as high_path_file:
+    with open("high_path_zscores_kosakonia_nr_default.txt", "w") as high_path_file:
         high_path_file.write(header)
         for line in zscore_high_path:
             high_path_file.write("\t".join(line))
         high_path_file.close()
 
-    with open("kosakonia_nr_default_zscore_no_pgp.txt", "w") as no_pgp_file:
+    with open("no_pgp_zscores_kosakonia_nr_default.txt", "w") as no_pgp_file:
         no_pgp_file.write(header)
         for line in zscore_no_pgp:
             no_pgp_file.write("\t".join(line))
         no_pgp_file.close()
 
-    with open("kosakonia_nr_default_zscore_high_path_keggids.txt", "w") as no_pgp_file:
+    with open("high_path_keggids_kosakonia_nr_default.txt", "w") as no_pgp_file:
         no_pgp_file.write(header)
         for line in zscore_high_path:
             no_pgp_file.write(line[0].split(" ")[0] + "\n")
         no_pgp_file.close()
 
-    with open("kosakonia_nr_default_zscore_no_pgp_keggids.txt", "w") as no_pgp_file:
+    with open("no_pgp_keggids_kosakonia_nr_default.txt", "w") as no_pgp_file:
         no_pgp_file.write(header)
         for line in zscore_no_pgp:
             no_pgp_file.write(line[0].split(" ")[0] + "\n")

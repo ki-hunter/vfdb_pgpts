@@ -23,18 +23,18 @@ def fetch_assembly():
         return "assembly summary present"
 
 
-def format_to_usability(string:str):
+def format_to_usability(string:str) -> str:
     """\
     Removes several characters (" ", ".", "/", ",") from a given string, if present, to enable use as link
 
     Parameters
     ----------
-    string : String
+    string : str
         String to be formatted
 
     Returns
     -------
-    formatted_string : String
+    formatted_string : str
         Formatted String
 
 
@@ -44,10 +44,15 @@ def format_to_usability(string:str):
     return formatted_string
 
 
-def fetch_genus():
+def fetch_genus() -> str:
     """\
     Parses the assembly file for a user-entered genus name, then creates and bashes a shell to download
     that genus' protein.faa.gz files from NCBI. The downloads are placed withina new directory {genus}/{genus}_protein
+    
+    Returns 
+    -------
+    genus_name : str
+        name of the genus for which protein files where downloaded
     """
     genus_name = input("Enter genus name: ").capitalize()
     species_count = 0
