@@ -172,7 +172,7 @@ def genus_job_creator(genus_name):
         Name of the genus for which jobs are created, used to navigate to the correct directory
 
     """
-    batch_size = input("Enter size of batches (influences max runtime (4h per species) and amount of jobs):")
+    batch_size = int(input("Enter size of batches (influences max runtime (4h per species) and amount of jobs):"))
     print("Creating jobs...")
 
     running_dir = os.getcwd()
