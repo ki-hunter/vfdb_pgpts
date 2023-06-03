@@ -11,7 +11,8 @@ def fetch_assembly():
     assembly_not_downloaded = not ("assembly_summary.txt" in dir_content)
 
     if assembly_not_downloaded:
-
+        
+        print("Downloading the NCBI assembly summary")
         assembly_url = "https://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/assembly_summary.txt"
         response = urllib.request.urlopen(assembly_url)
         web_content = response.read().decode("UTF-8")
@@ -20,7 +21,7 @@ def fetch_assembly():
             file.close()
     
     else:
-        return "assembly summary present"
+        return "NCBI assembly summary present"
 
 
 def format_to_usability(string:str) -> str:
@@ -54,7 +55,7 @@ def fetch_genus() -> str:
     genus_name : str
         name of the genus for which protein files where downloaded
     """
-    genus_name = input("Enter genus name: ").capitalize()
+    genus_name = input("Enter genus name: ")
     species_count = 0
 
     assembly_file = open("assembly_summary.txt", "r")
@@ -85,7 +86,7 @@ def fetch_genus() -> str:
             full_check = "Full" in line
             complete_check = "Complete Genome" in line
 
-            if genus_name in line and (full_check or complete_check):
+            if genus_name.capitalize() in line and (full_check or complete_check):
 
                 contents = line.split("\t")
 
@@ -202,7 +203,7 @@ def genus_job_creator(genus_name):
     os.system(f"mkdir {vfdb_vfdb_dir}")
     os.system(f"mkdir {batches_dir}")
 
-    max_runtime = batch_size * 4
+    max_runtime = abs(batch_size) * 4
 
     for i in range(0, species_count):
 
