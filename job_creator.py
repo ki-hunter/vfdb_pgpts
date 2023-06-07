@@ -169,7 +169,7 @@ def genus_job_creator(genus_name):
 
     Parameters
     ----------
-    genus_name : String
+    genus_name : str
         Name of the genus for which jobs are created, used to navigate to the correct directory
 
     """
@@ -262,7 +262,7 @@ def comparison_creator(genus_name):
 
     Parameters
     ----------
-    genus_name : String
+    genus_name : str
         Name of the genus for which jobs are created, used to navigate to the correct directory
         
     """

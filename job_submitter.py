@@ -2,56 +2,23 @@ import os
 import sys
 import time
 import re
-# def submitting_shell():
-#     """\
-#     Submits all jobs of a user-specified genus found in the {genus}/batches directory
-#     """
-#     dir_content = os.listdir()
-#     gattung_name = input("Enter genus for which you want to submit jobs:").capitalize()
-#     cwd = os.getcwd()
 
-#     if gattung_name in dir_content:
-#         os.chdir(f"{gattung_name}/batches")
-#         batches = os.listdir()
-#         print(f"Found {len(batches)} batches, submitting...")
-        
-#         for batch in batches:
-
-#             os.system(f"qsub -q short {batch}")
-#             print(f"{batch} submitted")
-        
-#         print("Batches submitted. Overview")
-#         os.system("qstat -u tu_zxozy01")
-
-#     else:
-#         return "No such genus present."
-
-
-
-# def screen_creator(genus:str, jobs_dir:str):
-#     which_screen_result = call(["which", "screen"])
-
-#     if which_screen_result == 0:
-#         print("screen installed")
-#     else:
-#         print("screen not installed")
-#         sys.exit()
-
-#     screen_name = f"{genus}_job_submitter"
-
-#     #screen = run(["/usr/bin/screen", "-S", f"{screen_name}"], shell=True, stdin=PIPE, stdout=PIPE)
-#     #screen = Popen(["/usr/bin/screen", "-S", f"{screen_name}"], shell=True, stdin=PIPE, stdout=PIPE)
-#     screen = Popen(f"/usr/bin/screen -S {screen_name}", shell=True, start_new_session=True, stdin=PIPE, stdout=PIPE)
-
-#     #test = Popen(["echo", "pls be in screen"], shell=True, stdin=screen.stdout)
-
-    
-#     statusProc = run('screen -ls', shell=True, stdout=PIPE, stdin=PIPE)
-#     statusString = statusProc.stdout.decode('ascii')
-#     print(statusString)
 
 
 def input_manager():
+    """\
+    After user confirmation that they wish to start automatic job submission and entry of the genus and MAX_JOB_AMOUNT 
+    this function wraps a function call of watchdog_boss() in a .sh file which is executed inside a screen. 
+    The screen is closed after all jobs are done.
+
+    Input Parameters
+    ----------
+    confirmation : str
+        either y or n, something else prompts the function again
+    genus : str
+        Name of the genus for which jobs are to be submitted automatically
+
+    """
     confirmation = input("Start automatic submission of all jobs now? y/n: ")
     
     yes = confirmation == "y" or confirmation == "yes"
@@ -66,9 +33,17 @@ def input_manager():
         
         genus = input("Please enter genus name (should match the directory): ")
         
+        jobs_dir = os.getcwd()
+        
+        jobs_content = os.listdir(jobs_dir)
+        
+        if not genus in jobs_content:
+            print(jobs_content)
+            print(f"Genus {genus} not found, typo?")
+            input_manager()
+            sys.exit()
+        
         MAX_JOBS_AMOUNT = int(input("How many jobs should be submitted at a time? "))
-    
-        # genus = "kosakonia"
     
         screen_name = genus + "_jobs"
     
@@ -77,36 +52,36 @@ def input_manager():
         command = f'python3.6 -c "from job_submitter import watchdog_boss; {function_call}"'
     
         with open(f"{screen_name}.sh", "w") as shell:
-            # shell.write("touch test.txt \n")
+            
             shell.write(command + "\n")
-            # shell.write("touch test2.txt")
-    
-        #command = f"nohup python3.6 -c 'from job_submitter import watchdog_boss; {function_call}' &"
     
         command = f'screen -dmS {screen_name} bash -c "bash {screen_name}.sh; exec sh"'
         
         print(command)
 
         os.system(command)
+    
+    else:
+        print("Please enter either 'y' or 'n'")
+        input_manager()
 
 
 
 def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
-    # confirmation = "y"
-    
-    #genus = "kosakonia"
-    
-    # yes = confirmation == "y" or confirmation == "yes"
-    
-    # no = confirmation == "n" or confirmation == "no"
-    
+    """\
+    This function finds all undone jobs for the genus, divides the total amount of jobs by the maximum amount of 
+    jobs to be run at a time (MAX_JOBS_AMOUNT) and then submits them in batches of size MAX_JOBS_AMOUNT. Completion
+    of a job is indicated by a feedback file being created; the presence of which is checked for by watch_dog() 
+    every ten minutes. After all jobs in a batch are completed, the next batch is submitted.
+
+    Parameters
+    ----------
+    genus : str
+        Name of the genus for which jobs are to be submitted automatically
+    MAX_JOBS_AMOUNT : int
+        maximum amount of jobs to be submitted at a time
+    """
     MAX_JOBS_AMOUNT = int(MAX_JOBS_AMOUNT)
-    
-    # if no:
-    #     print("halting...")
-    #     sys.exit()
-        
-    # if yes:
         
     jobs_dir = os.getcwd()
 
@@ -114,9 +89,7 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
 
     dir_content = os.listdir(genus_batches_dir)
 
-
     batch_pattern = f"{genus}_batch" + r"_[\d]{1,}.sh$"
-    print(batch_pattern)
 
     batches = []
 
@@ -124,8 +97,11 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
         batch = re.findall(batch_pattern, content)
 
         if len(batch) > 0:
+            already_done = f"{batch[0]}_LOG_feedback" in dir_content
 
-            batches.append(batch[0])
+            if not already_done:
+
+                batches.append(batch[0])
 
     job_list = []
 
@@ -133,6 +109,10 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
         job_list.append(batches[i:i + MAX_JOBS_AMOUNT])
 
     print(f"found {len(batches)} jobs, submitting in batches of {MAX_JOBS_AMOUNT}")
+    
+    os.system(f"echo {len(batches)}, {batches} >> undone_batches.txt")
+    
+    os.system(f"echo {job_list} >> joblist.txt")
 
     for job in job_list:
         print(f"submitting {job}")
@@ -167,16 +147,30 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
                
             time.sleep(10*60)
 
-    return True
+    screen_name = genus + "_jobs"
     
-    # else:
-    #     os.system("kill %1")
-    #     print("wrong input, please use y/n")
-    #     input_manager()
+    os.system(f"screen -XS {screen_name} quit")
+    
+    return True
 
 
 
-def watchdog(job_titles:str, job_dir:str):
+def watchdog(job_titles:list, job_dir:str):
+    """\
+    This function checks for the presence of the feedback files for a given list of jobs
+
+    Parameters
+    ----------
+    job_titles : list
+        list of jobs to be checked for completion
+    job_dir : str
+        directory of those jobs
+    
+    Returns
+    -------
+    jobs_all_done : bool
+        True if all jobs are done, False if even one is not
+    """
     jobs_all_done = True
 
     dir_content = os.listdir(job_dir)
@@ -197,9 +191,6 @@ def watchdog(job_titles:str, job_dir:str):
     
     
 def main():
-    #submitting_shell()
-
-    #screen_creator("Kosakonia", "/beegfs/work/tu_zxozy01")
     
     input_manager()
     
