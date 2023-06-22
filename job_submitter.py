@@ -110,9 +110,9 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
 
     print(f"found {len(batches)} jobs, submitting in batches of {MAX_JOBS_AMOUNT}")
     
-    os.system(f"echo {len(batches)}, {batches} >> undone_batches.txt")
+    # os.system(f"echo {len(batches)}, {batches} >> undone_batches.txt")
     
-    os.system(f"echo {job_list} >> joblist.txt")
+    # os.system(f"echo {job_list} >> joblist.txt")
 
     for job in job_list:
         print(f"submitting {job}")

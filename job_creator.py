@@ -71,15 +71,24 @@ def fetch_genus() -> str:
     isolate_index = assembly_header.index("isolate")
 
     species_in_gattung = []
+    
+    working_dir = os.getcwd()
 
     with open("genus_DL.sh", "w") as shell:
-        shell.write(f"mkdir {genus_name}\n")
-        shell.write(f"cd {genus_name}\n")
+        
+        genus_dir = f"{working_dir}/{genus_name}"
+        
+        shell.write(f"mkdir {genus_dir}\n")
+        shell.write(f"cd {genus_dir}\n")
+        
+        shell.write(f"touch  {genus_dir}/{genus_name}_ncbi_data.txt\n")
+        
+        genus_protein_dir = f"{genus_dir}/{genus_name}_protein"
 
-        shell.write(f"mkdir {genus_name}_protein\n")
-        shell.write(f"cd {genus_name}_protein/\n")
+        shell.write(f"mkdir {genus_protein_dir}\n")
+        shell.write(f"cd {genus_protein_dir}\n")
 
-        shell.write(f"touch {genus_name}_records.txt\n")
+        shell.write(f"touch {genus_protein_dir}/{genus_name}_records.txt\n")
         
         for line in lines:
 
@@ -87,6 +96,8 @@ def fetch_genus() -> str:
             complete_check = "Complete Genome" in line
 
             if genus_name.capitalize() in line and (full_check or complete_check):
+                
+                shell.write(f"echo '{line}' >> {genus_dir}/{genus_name}_ncbi_data.txt")
 
                 contents = line.split("\t")
 

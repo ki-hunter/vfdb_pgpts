@@ -18,8 +18,7 @@ def ncbi_datasets_installer():
 
 
 
-def species_name_finder():
-    genus_name = input("Please enter genus name:")
+def species_name_finder(genus_dir:str):
     
     
     
@@ -28,9 +27,9 @@ def species_name_finder():
 
 
 def main():
-    ncbi_datasets_installer()
+    # ncbi_datasets_installer()
     #species_name_finder()
-
+    pass
 
 
 if __name__ == '__main__':
