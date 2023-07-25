@@ -2,6 +2,7 @@ import time
 import os
 import re
 import sys
+import bacdive
 
 def test_function():
     print(os.getcwd())
@@ -165,10 +166,21 @@ def watchdog(job_titles:str, job_dir:str):
 
 def main():
 
-    while(not watchdog(["first_LOG_feedback.txt", "second_LOG_feedback.txt", "third_LOG_feedback.txt"])):
-        time.sleep(10)
-        print("not yet")
-    test2()
+    # while(not watchdog(["first_LOG_feedback.txt", "second_LOG_feedback.txt", "third_LOG_feedback.txt"])):
+    #     time.sleep(10)
+    #     print("not yet")
+    # test2()
+    
+    client = bacdive.BacdiveClient("kilian.hunter@student.uni-tuebingen.de", "Kosakonia_Cowanii_123654")
+    
+    client.search(taxonomy="Kosakonia")
+    
+    for strain in client.retrieve(["NCBI tax ID"]):
+        print(strain)
+    
+    
+    
+    pass
 
 
 if __name__ == '__main__':
