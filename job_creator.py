@@ -16,7 +16,7 @@ def fetch_assembly():
         assembly_url = "https://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/assembly_summary.txt"
         response = urllib.request.urlopen(assembly_url)
         web_content = response.read().decode("UTF-8")
-        with open("assembly_summary.txt", "w") as file:
+        with open("assembly_summary.txt", "w", encoding="utf-8") as file:
             file.write(web_content)
             file.close()
     
@@ -58,7 +58,7 @@ def fetch_genus() -> str:
     genus_name = input("Enter genus name: ")
     species_count = 0
 
-    assembly_file = open("assembly_summary.txt", "r")
+    assembly_file = open("assembly_summary.txt", "r", encoding="utf-8")
     lines = assembly_file.readlines()
 
     assembly_header = lines[1].split("\t")
