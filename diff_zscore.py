@@ -1,23 +1,25 @@
 import os
-import pathlib
-
+from pathlib import Path
 def zscore_filter():
     """\
     Given a Z-Score chart with 2 zscore values of PGP and Pathogen for each KEGG id is filtered for:
-    - absence of pgp/presence of pathogen 
+    - absence of pgp/presence of pathogen
     - higher pathogen score than pgp
     the filtered KEGG ids are saved in files
     """
-    dir_content = os.listdir()
+    cwd = os.getcwd()
+    next_dir = cwd + "/Pseudomonas_analysis/"
+    dir_content = os.listdir(Path(next_dir))
+    print(dir_content)
     # print(pathlib.Path.resolve(__file__))
 
-    zscore_file_missing = not("kosakonia_nr_default_zscore_chart.txt" in dir_content)
+    zscore_file_missing = not("912_pseudomonas_zscores.txt" in dir_content)
 
     if zscore_file_missing:
         print("missing zscore file")
         exit()
 
-    zscore_file = open("kosakonia_nr_default_zscore_chart.txt")
+    zscore_file = open(Path(next_dir + "912_pseudomonas_zscores.txt"))
 
     zscore_lines = zscore_file.readlines()
 
@@ -27,29 +29,29 @@ def zscore_filter():
     
     zscore_lines = [line.split("\t") for line in zscore_lines]
 
-    zscore_high_path = [line for line in zscore_lines if float(line[2]) >= float(line[1])]
+    zscore_high_path = [line for line in zscore_lines if float(line[1]) >= float(line[2])]
 
-    zscore_no_pgp = [line for line in zscore_lines if (float(line[2]) >= float(line[1])) and (float(line[1]) == 0.0)]
+    zscore_no_pgp = [line for line in zscore_lines if (float(line[1]) >= float(line[2])) and (float(line[2]) == 0.0)]
 
-    with open("high_path_zscores_kosakonia_nr_default.txt", "w") as high_path_file:
+    with open(Path(next_dir + "high_patho_zscores_Pseudomonas_nr_default.txt"), "w") as high_path_file:
         high_path_file.write(header)
         for line in zscore_high_path:
             high_path_file.write("\t".join(line))
         high_path_file.close()
 
-    with open("no_pgp_zscores_kosakonia_nr_default.txt", "w") as no_pgp_file:
+    with open(Path(next_dir + "only_patho_zscores_Pseudomonas_nr_default.txt"), "w") as no_pgp_file:
         no_pgp_file.write(header)
         for line in zscore_no_pgp:
             no_pgp_file.write("\t".join(line))
         no_pgp_file.close()
 
-    with open("high_path_keggids_kosakonia_nr_default.txt", "w") as no_pgp_file:
+    with open(Path(next_dir + "high_patho_vfdb_keggids.txt"), "w") as no_pgp_file:
         no_pgp_file.write(header)
         for line in zscore_high_path:
             no_pgp_file.write(line[0].split(" ")[0] + "\n")
         no_pgp_file.close()
 
-    with open("no_pgp_keggids_kosakonia_nr_default.txt", "w") as no_pgp_file:
+    with open(Path(next_dir + "only_patho_vfdb_keggids.txt"), "w") as no_pgp_file:
         no_pgp_file.write(header)
         for line in zscore_no_pgp:
             no_pgp_file.write(line[0].split(" ")[0] + "\n")

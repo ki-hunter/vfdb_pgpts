@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import re
-
+from pathlib import Path
 
 
 def input_manager():
@@ -33,7 +33,7 @@ def input_manager():
         
         genus = input("Please enter genus name (should match the directory): ")
         
-        jobs_dir = os.getcwd()
+        jobs_dir = Path(os.getcwd())
         
         jobs_content = os.listdir(jobs_dir)
         
@@ -85,7 +85,7 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
         
     jobs_dir = os.getcwd()
 
-    genus_batches_dir = f"{jobs_dir}/{genus}/batches"
+    genus_batches_dir = Path(f"{jobs_dir}/{genus}/batches")
 
     dir_content = os.listdir(genus_batches_dir)
 
@@ -97,7 +97,9 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
         batch = re.findall(batch_pattern, content)
 
         if len(batch) > 0:
-            already_done = f"{batch[0]}_LOG_feedback" in dir_content
+            batch_name = batch[0].replace(".sh", "")
+
+            already_done = f"{batch_name}_LOG_feedback" in dir_content
 
             if not already_done:
 
@@ -116,11 +118,14 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
 
     for job in job_list:
         print(f"submitting {job}")
+
         for batch in job:
+
             with open(f"{genus_batches_dir}/{batch}", "r") as file:
                 shell = file.readlines()
 
             for line in shell:
+
                 if "walltime" in line:
                     max_runtime = int(line.split("=")[1].split(":")[0])
 
@@ -135,8 +140,9 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
             os.system(command)
             print(f"{batch} submitted")
 
-        while(not watchdog(job, genus_batches_dir)):
-            if not watchdog(job, jobs_dir):
+        while(not watchdog()):
+
+            if not watchdog():
                 
                 for batch in job:
                     
@@ -155,44 +161,78 @@ def watchdog_boss(genus:str, MAX_JOBS_AMOUNT:int):
 
 
 
-def watchdog(job_titles:list, job_dir:str):
-    """\
-    This function checks for the presence of the feedback files for a given list of jobs
+def get_unfinished_jobs(genus:str):
 
-    Parameters
-    ----------
-    job_titles : list
-        list of jobs to be checked for completion
-    job_dir : str
-        directory of those jobs
+    jobs_dir = os.getcwd()
+
+    genus_batches_dir = f"{jobs_dir}/{genus}/batches"
+
+    unfinished_jobs = []
+
+    genus_ident = genus[:4]
+
+    print(genus_ident)
+
+    pass
+
+
+
+# def watchdog(job_titles:list, job_dir:str):
+#     """\
+#     This function checks for the presence of the feedback files for a given list of jobs
+
+#     Parameters
+#     ----------
+#     job_titles : list
+#         list of jobs to be checked for completion
+#     job_dir : str
+#         directory of those jobs
     
-    Returns
-    -------
-    jobs_all_done : bool
-        True if all jobs are done, False if even one is not
-    """
-    jobs_all_done = True
+#     Returns
+#     -------
+#     jobs_all_done : bool
+#         True if all jobs are done, False if even one is not
+#     """
+#     jobs_all_done = True
 
-    dir_content = os.listdir(job_dir)
+#     dir_content = os.listdir(job_dir)
 
-    for job in job_titles:
+#     for job in job_titles:
 
-        job_feedback = f"{job}_LOG_feedback"
+#         job_feedback = f"{job}_LOG_feedback"
 
-        if not job_feedback in dir_content:
-            print(f"{job} not yet done")
-            jobs_all_done = False
+#         if not job_feedback in dir_content:
+#             print(f"{job} not yet done")
+#             jobs_all_done = False
+
+#     return jobs_all_done
+
+
+
+def watchdog():
+    jobs_all_done = False
+
+    os.system("qstat -u tu_zxozy01 > active_queue.txt")
+
+    with open("active_queue.txt", "r") as file:
+        lines = file.readlines()
+
+    if len(lines) < 1:
+        jobs_all_done = True
+        print("ALL JOBS DONE")
 
     return jobs_all_done
-
-
-
-    
     
     
 def main():
     
-    input_manager()
+    # input_manager()
+
+    get_unfinished_jobs("kosakonia")
+
+    # watchdog()
+
+    pass
     
 
 
