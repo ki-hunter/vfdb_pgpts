@@ -1,5 +1,6 @@
 import os
 
+
 def kegg_izer():
     """\
     Filters the total KEGG ids from a MEGAN comparison for the KEGG ids of virulence factors in the VFDB
@@ -14,7 +15,7 @@ def kegg_izer():
     if vfdb_file_missing or comparison_missing:
         print("missing essential file(s), try again")
         exit()
-    
+
     vfdb_keggid_set = set()
 
     vfdb_file = open("VFDB_readname_to_keggname.txt", "r")
@@ -25,7 +26,7 @@ def kegg_izer():
         kegg_id = line.split("\t")[1].strip()
 
         vfdb_keggid_set.add(kegg_id)
-    
+
     comparison_file = open("kosakonia_keggid_to_count.txt", "r")
 
     comparison_lines = comparison_file.readlines()
@@ -44,14 +45,12 @@ def kegg_izer():
         for line in comparison_trimmed:
             shell.write(line)
         shell.close()
-    
-    return("Done!")
 
+    return ("Done!")
 
 
 def main():
     kegg_izer()
-
 
 
 if __name__ == '__main__':

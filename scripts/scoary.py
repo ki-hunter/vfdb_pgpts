@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import math
 
+
 def create_absence_presence():
 
     dir_content = os.listdir()
@@ -31,7 +32,7 @@ def create_absence_presence():
             keggname_to_count[new_name] = keggname_to_count[new_name].apply(lambda x : 1 if int(x) >= 1 else 0)
 
         additional_columns = ["Non-unique Gene name","Annotation","No. isolates","No. sequences","Avg sequences per isolate","Genome fragment","Order within fragment","Accessory Fragment","Accessory Order with Fragment","QC","Min group size nuc","Max group size nuc","Avg group size nuc"]
-        
+
         col_index = 0
 
         for column_name in additional_columns:
@@ -40,39 +41,34 @@ def create_absence_presence():
             col_index += 1
 
         keggname_to_count.to_csv(str(file).replace("keggname_to_count.txt", "absence_presence.csv"), sep=",")
-    
+
     return True
 
 
-
-def create_trait_tables(trait_name:str):
+def create_trait_tables(trait_name: str):
 
     metadata = pd.read_csv("Kosakonia_metadata_58_species.txt", sep="\t")
 
     trait_variants = []
 
-
     for i in range(len(metadata)):
         variant_name = metadata.loc[i, trait_name]
-        
-        if not variant_name in trait_variants:
+
+        if variant_name not in trait_variants:
 
             variant_isnan = isinstance(variant_name, float) and math.isnan(variant_name)
 
             if not variant_isnan:
 
                 trait_variants.append(variant_name)
-    
 
     stripped_strains = [str(strain).replace("_result", "").strip() for strain in metadata.iloc[:, 0]]
 
     trait_table = pd.DataFrame(stripped_strains)
 
-
     for variant in trait_variants:
 
         trait_table.insert(1, variant, [0]*len(metadata))
-
 
     for i in range(len(metadata)):
 
@@ -87,9 +83,8 @@ def create_trait_tables(trait_name:str):
 
         else:
             trait_table.loc[i, variant] = 1
-    
 
-    trait_table.rename(columns={0 : ""}, inplace=True)
+    trait_table.rename(columns={0: ""}, inplace=True)
     print(trait_table)
 
     trait_table.to_csv(f"{trait_name}_trait_table.csv", sep=",", index=False)
@@ -97,13 +92,10 @@ def create_trait_tables(trait_name:str):
     return True
 
 
-
-
 def main():
     create_absence_presence()
 
     # create_trait_tables("PLANT_PHENOTYPE")
-
 
     pass
 
